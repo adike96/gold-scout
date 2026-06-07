@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#111827"/>
+  <title>Gold Potential Scout V2</title>
+  <link rel="manifest" href="manifest.webmanifest"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Gold Potential Scout V2</h1>
+      <p>Field scoring for placer-gold potential in glaciated river systems.</p>
+    </div>
+    <button id="installBtn" hidden>Install</button>
+  </header>
+
+  <main>
+    <section class="card alert">
+      <b>Important:</b> this app estimates where gold is more likely to concentrate. It cannot confirm gold without panning.
+      Always verify legal access and local rules before digging.
+    </section>
+
+    <section class="card">
+      <h2>1. Site location</h2>
+      <button id="gpsBtn">Use GPS</button>
+      <button id="copyBtn" class="secondary">Copy coordinates</button>
+      <div class="grid2">
+        <label>Latitude <input id="lat" inputmode="decimal" placeholder="41.084000"></label>
+        <label>Longitude <input id="lon" inputmode="decimal" placeholder="-85.625000"></label>
+      </div>
+      <p id="geoStatus" class="muted">GPS lets the model apply Indiana glacial-region scoring.</p>
+      <button id="mapBtn" class="secondary">Open Apple/Google Maps</button>
+    </section>
+
+    <section class="card">
+      <h2>2. River setting</h2>
+      <div class="grid2">
+        <label>Primary landform
+          <select id="landform">
+            <option value="active_bar">Active river gravel bar</option>
+            <option value="creek_mouth">Creek mouth / gravel fan</option>
+            <option value="riffle_tail">Riffle tail-out / pool head</option>
+            <option value="old_terrace">Old river terrace / high gravel bank</option>
+            <option value="cut_bank">Cut bank exposing gravel over clay</option>
+            <option value="lake">Lake shore / still water</option>
+            <option value="upland">Random field or woods</option>
+          </select>
+        </label>
+        <label>Water energy
+          <select id="energy">
+            <option value="fast_mixed">Fast/mixed with riffles</option>
+            <option value="moderate">Moderate current</option>
+            <option value="slow">Slow/silty</option>
+            <option value="dry">Dry old channel/terrace</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="checks">
+        <label><input type="checkbox" id="insideBend"> Inside bend / point bar</label>
+        <label><input type="checkbox" id="naturalTrap"> Behind boulder, logjam, root wad, bridge pier, or old obstruction</label>
+        <label><input type="checkbox" id="coarseLag"> Coarse lag gravel/cobbles with smaller material washed out</label>
+        <label><input type="checkbox" id="clay"> Clay, hardpan, compact till, or bedrock-like false bottom</label>
+        <label><input type="checkbox" id="bankLayers"> Bank shows rounded gravel layers, not just soil</label>
+        <label><input type="checkbox" id="blackSand"> Black sand in pan/concentrates</label>
+        <label><input type="checkbox" id="garnets"> Garnets, lead shot, dense iron bits, or other heavies</label>
+        <label><input type="checkbox" id="legal"> Legal access / permission confirmed</label>
+      </div>
+
+      <div class="grid2">
+        <label>Sample depth
+          <select id="depth">
+            <option value="unknown">Unknown / surface only</option>
+            <option value="top">0–6 inches</option>
+            <option value="target">6–18 inches to bottom gravel</option>
+            <option value="deep">18+ inches</option>
+            <option value="falsebottom">Directly on clay/hardpan/bedrock cracks</option>
+          </select>
+        </label>
+        <label>Material moisture
+          <select id="moisture">
+            <option value="wet">Wet active material</option>
+            <option value="damp">Damp bank/terrace material</option>
+            <option value="dry">Dry upland material</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3. Photo analysis</h2>
+      <input id="photo" type="file" accept="image/*" capture="environment"/>
+      <canvas id="canvas"></canvas>
+      <div id="imageMetrics" class="metrics"></div>
+      <p class="muted">Photo model estimates texture, gravel, dark-mineral areas, clay/tan material, and water/vegetation interference.</p>
+    </section>
+
+    <section class="card">
+      <h2>4. Test pan results</h2>
+      <div class="grid3">
+        <label>Black sand amount
+          <select id="panBlackSand">
+            <option value="0">None</option>
+            <option value="1">Trace</option>
+            <option value="2">Moderate</option>
+            <option value="3">Heavy</option>
+          </select>
+        </label>
+        <label>Gold specks seen
+          <select id="goldSeen">
+            <option value="0">None</option>
+            <option value="1">Possible</option>
+            <option value="2">1–3 likely specks</option>
+            <option value="3">Several confirmed specks</option>
+          </select>
+        </label>
+        <label>Pans tested
+          <input id="pans" type="number" min="0" max="99" value="0">
+        </label>
+      </div>
+    </section>
+
+    <section class="card result">
+      <h2>Gold potential</h2>
+      <div id="score">—</div>
+      <div id="rating">Add data and calculate.</div>
+      <div class="bar"><span id="barFill"></span></div>
+      <button id="calcBtn">Calculate</button>
+      <button id="saveBtn" class="secondary">Save report</button>
+      <button id="exportBtn" class="secondary">Export JSON</button>
+      <div id="breakdown"></div>
+    </section>
+
+    <section class="card">
+      <h2>Recommended next test</h2>
+      <div id="nextStep" class="next">Calculate a score first.</div>
+    </section>
+
+    <section class="card">
+      <h2>Saved reports</h2>
+      <div id="reports"></div>
+      <button id="clearBtn" class="danger">Clear saved</button>
+    </section>
+  </main>
+
+  <footer>Gold Potential Scout V2 • Built for field scouting, not mining claims or assay-grade prediction.</footer>
+  <script src="app.js"></script>
+</body>
+</html>
