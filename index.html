@@ -4,39 +4,57 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#0f172a"/>
-<title>Gold Scout V6.4</title>
+<title>Gold Scout V6.5</title>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-<header><div><h1>Gold Scout V6.4</h1><p>Map stays visible. Options can hide.</p></div><button id="installBtn" hidden>Install</button></header>
+<header><div><h1>Gold Scout V6.5</h1><p>Map-overlay controls, collapsible on-map options, and throttled auto-refresh.</p></div><button id="installBtn" hidden>Install</button></header>
 <nav><button data-tab="map" class="active">Map</button><button data-tab="analyze">Analyze</button><button data-tab="journal">Journal</button><button data-tab="guide">Guide</button></nav>
 <main>
-<section class="card alert"><b>V6.4:</b> Hide Options only hides controls, not the map. Use map buttons for Street Labels, Satellite, Topo, and Town/River Labels.</section>
+<section class="card alert"><b>V6.5:</b> Controls now sit on the map itself. Auto-refresh is back, but throttled so it waits after you stop moving the map.</section>
 
 <section id="map" class="tab active">
 <section class="card mapCard">
-<div class="mapHead"><h2>Stable river heat map</h2><button id="toggleOptionsBtn" class="secondary">Hide Options</button></div>
-<div id="optionsPanel">
-<div class="toolbar">
-<button id="gpsBtn">Use GPS</button>
-<button id="refreshHeatBtn">Refresh Heat Map</button>
-<button id="clearHeatBtn" class="secondary">Clear Heat Map</button>
-<button id="saveCurrentBtn" class="secondary">Save Selected</button>
-<select id="mapMode"><option value="auto">Auto terrain</option><option value="river">River / creek</option><option value="glacial">Glacial outwash</option><option value="terrace">Terrace / bench</option><option value="desert">Desert wash</option></select>
+<div class="mapWrap">
+  <div id="mapView"></div>
+
+  <div id="mapOverlay" class="mapOverlay">
+    <button id="toggleOverlayBtn" class="overlayToggle">Hide Options</button>
+    <div id="overlayContent">
+      <div class="overlayRow">
+        <button id="gpsBtn">GPS</button>
+        <button id="refreshHeatBtn">Refresh</button>
+        <button id="clearHeatBtn" class="secondary">Clear</button>
+        <button id="saveCurrentBtn" class="secondary">Save</button>
+      </div>
+      <div class="overlayRow">
+        <button id="streetBtn" class="secondary">Street</button>
+        <button id="satBtn" class="secondary">Satellite</button>
+        <button id="topoBtn" class="secondary">Topo</button>
+        <button id="labelsBtn" class="secondary">Labels Off</button>
+      </div>
+      <div class="overlayRow">
+        <select id="mapMode">
+          <option value="auto">Auto terrain</option>
+          <option value="river">River / creek</option>
+          <option value="glacial">Glacial outwash</option>
+          <option value="terrace">Terrace / bench</option>
+          <option value="desert">Desert wash</option>
+        </select>
+        <select id="autoRefresh">
+          <option value="on" selected>Auto refresh on</option>
+          <option value="off">Auto refresh off</option>
+        </select>
+      </div>
+      <div class="legend"><span><i class="lg green"></i>High</span><span><i class="lg yellow"></i>Med</span><span><i class="lg orange"></i>Low</span><span><i class="lg blue"></i>River</span></div>
+    </div>
+  </div>
 </div>
-<div class="layerPanel"><b>Map Options</b><div class="layerButtons">
-<button id="streetBtn" class="secondary">Street Labels</button>
-<button id="satBtn" class="secondary">Satellite</button>
-<button id="topoBtn" class="secondary">Topo</button>
-<button id="labelsBtn" class="secondary">Town/River Labels: Off</button>
-</div></div>
-<div class="legend"><span><i class="lg green"></i> High</span><span><i class="lg yellow"></i> Medium</span><span><i class="lg orange"></i> Low</span><span><i class="lg blue"></i> River/creek</span></div>
-</div>
-<div id="mapView"></div>
+
 <div class="metrics"><div class="metric"><b>Heat cells</b><br><span id="candidateCount">—</span></div><div class="metric"><b>Best area</b><br><span id="bestTarget">—</span></div><div class="metric"><b>GPS accuracy</b><br><span id="gpsAccuracy">—</span></div><div class="metric"><b>Status</b><br><span id="mapStatus">Map ready</span></div></div>
-<div id="hotspotPanel" class="panel">Move the map, then tap Refresh Heat Map.</div>
+<div id="hotspotPanel" class="panel">Move the map. Heat map refreshes after you stop moving.</div>
 </section></section>
 
 <section id="analyze" class="tab">
@@ -55,8 +73,8 @@
 </section>
 
 <section id="journal" class="tab"><section class="card"><h2>Success journal</h2><button id="exportJsonBtn">Export JSON</button><button id="exportCsvBtn" class="secondary">Export CSV</button><button id="clearAllBtn" class="danger">Clear all</button><div id="journalList"></div></section></section>
-<section id="guide" class="tab"><section class="card"><h2>Guide</h2><ol><li>Choose Street, Satellite, or Topo.</li><li>Toggle Town/River Labels if using satellite.</li><li>Hide Options for a clean map.</li><li>Move map, then Refresh Heat Map manually.</li></ol></section></section>
+<section id="guide" class="tab"><section class="card"><h2>Guide</h2><ol><li>Controls are directly on the map.</li><li>Tap Hide Options for a cleaner map.</li><li>Auto-refresh waits until you stop panning/zooming.</li><li>Use Labels On over satellite for town/river names.</li></ol></section></section>
 </main>
-<footer>Gold Scout V6.4 • Map always visible</footer>
+<footer>Gold Scout V6.5 • On-map collapsible options • Auto-refresh restored</footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js"></script>
 </body></html>
