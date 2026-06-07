@@ -1,9 +1,0 @@
-{
-  "name": "Gold Scout Global V6.4",
-  "short_name": "Gold Scout V6.4",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#07101f",
-  "theme_color": "#0f172a",
-  "icons": []
-}
