@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#0f172a"/>
-<title>Gold Scout Global V6</title>
+<title>Gold Scout Global V6.1</title>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="styles.css"/>
@@ -12,8 +12,8 @@
 <body>
 <header>
   <div>
-    <h1>Gold Scout Global V6</h1>
-    <p>Live viewport hotspot engine, satellite maps, GPS, field scoring, photos, finds, exports, and offline-ready reports.</p>
+    <h1>Gold Scout Global V6.1</h1>
+    <p>River-locked viewport hotspot engine, satellite maps, GPS, field scoring, photos, finds, exports, and offline-ready reports.</p>
   </div>
   <button id="installBtn" hidden>Install</button>
 </header>
@@ -34,7 +34,7 @@
 <section id="map" class="tab active">
   <section class="card mapCard">
     <div class="mapHead">
-      <h2>Live satellite hotspot map</h2>
+      <h2>River-locked satellite hotspot map</h2>
       <span id="liveBadge">Viewport AI: ON</span>
     </div>
     <div class="toolbar">
@@ -58,7 +58,7 @@
       <div class="metric"><b>GPS accuracy</b><br><span id="gpsAccuracy">—</span></div>
       <div class="metric"><b>Selected</b><br><span id="selectedCoords">Tap map</span></div>
     </div>
-    <div id="hotspotPanel" class="panel">Pan or zoom the map. V6 will rank theoretical targets in the visible area.</div>
+    <div id="hotspotPanel" class="panel">Pan or zoom the map. V6.1 will rank theoretical targets on mapped rivers/streams in the visible area.</div>
   </section>
 </section>
 
@@ -226,7 +226,7 @@
 </section>
 </main>
 
-<footer>Gold Scout Global V6 • Satellite/live map needs internet. Reports are stored locally unless exported.</footer>
+<footer>Gold Scout Global V6.1 • Satellite/live map needs internet. Reports are stored locally unless exported.</footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
 </body>
