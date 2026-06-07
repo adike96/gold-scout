@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#0f172a"/>
-<title>Gold Scout Global V6.2.2</title>
+<title>Gold Scout Global V6.1</title>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="styles.css"/>
@@ -12,8 +12,8 @@
 <body>
 <header>
   <div>
-    <h1>Gold Scout Global V6.2.2</h1>
-    <p>River-locked viewport heat-map engine, satellite maps, GPS, field scoring, photos, finds, exports, and offline-ready reports.</p>
+    <h1>Gold Scout Global V6.1</h1>
+    <p>River-locked viewport hotspot engine, satellite maps, GPS, field scoring, photos, finds, exports, and offline-ready reports.</p>
   </div>
   <button id="installBtn" hidden>Install</button>
 </header>
@@ -34,17 +34,17 @@
 <section id="map" class="tab active">
   <section class="card mapCard">
     <div class="mapHead">
-      <h2>River-locked satellite heat-map map</h2>
-      <span id="liveBadge">River heat map: ON</span>
+      <h2>River-locked satellite hotspot map</h2>
+      <span id="liveBadge">Viewport AI: ON</span>
     </div>
     <div class="toolbar">
       <button id="gpsBtn">Use GPS</button>
       <button id="trackBtn" class="secondary">Track</button>
       <button id="stopTrackBtn" class="secondary">Stop</button>
-      <button id="refreshHeat-mapsBtn">Refresh heat map</button>
+      <button id="refreshHotspotsBtn">Refresh hotspots</button>
       <button id="saveCurrentBtn" class="secondary">Save selected spot</button>
       <select id="mapMode">
-        <option value="auto">Auto heat-map mode</option>
+        <option value="auto">Auto hotspot mode</option>
         <option value="river">River / creek</option>
         <option value="desert">Desert wash</option>
         <option value="terrace">Old terrace / bench</option>
@@ -53,12 +53,12 @@
     </div>
     <div id="mapView"></div>
     <div class="metrics">
-      <div class="metric"><b>Heat cells</b><br><span id="candidateCount">—</span></div>
-      <div class="metric"><b>Best visible area</b><br><span id="bestTarget">—</span></div>
+      <div class="metric"><b>Map candidates</b><br><span id="candidateCount">—</span></div>
+      <div class="metric"><b>Best visible target</b><br><span id="bestTarget">—</span></div>
       <div class="metric"><b>GPS accuracy</b><br><span id="gpsAccuracy">—</span></div>
       <div class="metric"><b>Selected</b><br><span id="selectedCoords">Tap map</span></div>
     </div>
-    <div id="heat-mapPanel" class="panel">Pan or zoom the map. V6.1 will rank theoretical targets on mapped rivers/streams in the visible area.</div>
+    <div id="hotspotPanel" class="panel">Pan or zoom the map. V6.1 will rank theoretical targets on mapped rivers/streams in the visible area.</div>
   </section>
 </section>
 
@@ -190,8 +190,8 @@
       <label>Viewport density
         <select id="density"><option value="low">Low / faster</option><option value="medium" selected>Medium</option><option value="high">High / more targets</option></select>
       </label>
-      <label>Max visible heat-maps
-        <select id="maxHeat-maps"><option value="10">10</option><option value="20" selected>20</option><option value="35">35</option><option value="50">50</option></select>
+      <label>Max visible hotspots
+        <select id="maxHotspots"><option value="10">10</option><option value="20" selected>20</option><option value="35">35</option><option value="50">50</option></select>
       </label>
       <label>Auto-refresh while panning
         <select id="autoRefresh"><option value="on" selected>On</option><option value="off">Off</option></select>
@@ -215,10 +215,10 @@
   <section class="card">
     <h2>What V6 improves</h2>
     <ul>
-      <li><b>Live viewport heat-maps:</b> the app analyzes the current map view and refreshes ranked theoretical targets as you pan/zoom.</li>
-      <li><b>Satellite-first workflow:</b> heat-map pins appear directly on real imagery.</li>
+      <li><b>Live viewport hotspots:</b> the app analyzes the current map view and refreshes ranked theoretical targets as you pan/zoom.</li>
+      <li><b>Satellite-first workflow:</b> hotspot pins appear directly on real imagery.</li>
       <li><b>Field learning:</b> saved pan results and calibration adjust future scores.</li>
-      <li><b>User-friendly labels:</b> every heat-map has a plain-English reason and next test action.</li>
+      <li><b>User-friendly labels:</b> every hotspot has a plain-English reason and next test action.</li>
       <li><b>Journal:</b> success and failure points are both saved because failures improve your local model.</li>
     </ul>
     <p><b>Limits:</b> This static web app cannot yet pull live USGS/LiDAR/claim layers automatically without adding API services. V6 is structured so those can be added next.</p>
@@ -226,7 +226,7 @@
 </section>
 </main>
 
-<footer>Gold Scout Global V6.2.2 • Satellite/live map needs internet. Reports are stored locally unless exported.</footer>
+<footer>Gold Scout Global V6.1 • Satellite/live map needs internet. Reports are stored locally unless exported.</footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
 </body>
