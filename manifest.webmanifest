@@ -1,9 +1,9 @@
 {
-  "name": "Gold Potential Scout V2",
-  "short_name": "Gold Scout V2",
+  "name": "Gold Scout Global V6",
+  "short_name": "Gold Scout V6",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#080d19",
-  "theme_color": "#111827",
+  "background_color": "#07101f",
+  "theme_color": "#0f172a",
   "icons": []
 }

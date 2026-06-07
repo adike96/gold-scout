@@ -1,125 +1,47 @@
-let deferredPrompt=null,lastImage=null,lastReport=null;
-const $=id=>document.getElementById(id);
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const weights={
-  landform:{active_bar:16,creek_mouth:18,riffle_tail:17,old_terrace:10,cut_bank:12,lake:2,upland:-10},
-  energy:{fast_mixed:12,moderate:8,slow:-4,dry:2},
-  depth:{unknown:0,top:3,target:8,deep:4,falsebottom:14},
-  moisture:{wet:4,damp:2,dry:-2},
-  blackSandPan:[0,5,11,17],
-  goldSeen:[0,12,25,35]
-};
+let deferredPrompt=null,watchId=null,map=null,selectedMarker=null,selectedLL=null,lastImage=null,lastReport=null;
+let hotspotLayer=null,pinLayer=null,refreshTimer=null;
+const $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const W={region:{unknown:0,historic:22,lode:18,glacial:10,greenstone:20,mountain:17,volcanic:14,desert:12,low:-12},landform:{inside:16,bar:14,creek:18,riffle:17,bedrock:22,clay:18,terrace:10,wash:14,lake:-7,upland:-14},bottom:{unknown:0,sand:-8,gravel:8,clay:15,bedrock:22},energy:{high:12,mod:8,flash:10,low:-5,dry:2},depth:{surface:0,six:3,target:8,deep:4,false:15},access:{unknown:0,public:4,permission:4,restricted:-30},panBlack:[0,5,12,18,23],gold:[0,12,28,50,65]};
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active");if(b.dataset.tab==="map")setTimeout(()=>{initMap();map.invalidateSize()},100)});
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").hidden=false});$("installBtn").onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;$("installBtn").hidden=true}};
+function initMap(){if(map)return;let lat=+$("lat").value||41.084,lon=+$("lon").value||-85.625;map=L.map("mapView").setView([lat,lon],17);let sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles © Esri"}).addTo(map);let street=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"});let topo=L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenTopoMap"});L.control.layers({"Satellite":sat,"Street":street,"Topo":topo}).addTo(map);hotspotLayer=L.layerGroup().addTo(map);pinLayer=L.layerGroup().addTo(map);selectedLL=L.latLng(lat,lon);selectedMarker=L.marker(selectedLL,{draggable:true}).addTo(map).bindPopup("Selected analysis point");selectedMarker.on("dragend",()=>setSelected(selectedMarker.getLatLng(),false));map.on("click",e=>setSelected(e.latlng,true));map.on("moveend zoomend",()=>{if($("autoRefresh").value==="on")debouncedHotspots()});renderPins();generateViewportHotspots();}
+function setSelected(ll,pan){selectedLL=ll;selectedMarker.setLatLng(ll);$("lat").value=ll.lat.toFixed(6);$("lon").value=ll.lng.toFixed(6);$("selectedCoords").textContent=`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;if(pan)selectedMarker.openPopup();}
+function setGPS(p){const ll=L.latLng(p.coords.latitude,p.coords.longitude);$("gpsAccuracy").textContent="±"+Math.round(p.coords.accuracy)+" m";if($("gpsAccuracy")){} $("lat").value=ll.lat.toFixed(6);$("lon").value=ll.lng.toFixed(6);$("gpsAccuracy").textContent="±"+Math.round(p.coords.accuracy)+" m"; if($("gpsAccuracy")){}; if($("gpsAccuracy")){}; if($("selectedCoords"))$("selectedCoords").textContent=`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; if(document.getElementById("gpsAccuracy")){}; if(map){setSelected(ll,false);map.setView(ll,18)}}
+$("gpsBtn").onclick=()=>{initMap();navigator.geolocation?navigator.geolocation.getCurrentPosition(setGPS,e=>alert(e.message),{enableHighAccuracy:true,timeout:16000,maximumAge:20000}):alert("GPS unavailable")};
+$("trackBtn").onclick=()=>{initMap();if(!navigator.geolocation)return alert("GPS unavailable");watchId=navigator.geolocation.watchPosition(setGPS,e=>alert(e.message),{enableHighAccuracy:true,maximumAge:5000})};
+$("stopTrackBtn").onclick=()=>{if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}};
+$("refreshHotspotsBtn").onclick=()=>{initMap();generateViewportHotspots()};
+function debouncedHotspots(){clearTimeout(refreshTimer);refreshTimer=setTimeout(generateViewportHotspots,450);}
+function icon(cls,size=18){return L.divIcon({className:cls,iconSize:[size,size]})}
+function metersPerPixel(){const c=map.getCenter(),z=map.getZoom();return 156543.03392*Math.cos(c.lat*Math.PI/180)/Math.pow(2,z)}
+function viewportCandidateCount(){let area=map.getSize().x*map.getSize().y;let density=$("density").value;let base=density==="high"?42:density==="medium"?26:14;let zoom=map.getZoom();return clamp(Math.round(base*(zoom<14?.65:zoom>17?1.2:1)),8,80)}
+function generateViewportHotspots(){if(!map)return;hotspotLayer.clearLayers();const b=map.getBounds(),max=+$("maxHotspots").value,count=viewportCandidateCount(),mode=$("mapMode").value;let candidates=[];for(let i=0;i<count;i++){let lat=b.getSouth()+Math.random()*(b.getNorth()-b.getSouth()),lng=b.getWest()+Math.random()*(b.getEast()-b.getWest());let h=scoreMapPoint(lat,lng,mode,i);candidates.push(h)}candidates.sort((a,b)=>b.score-a.score);candidates=candidates.slice(0,max);candidates.forEach((h,i)=>drawHotspot(h,i));$("candidateCount").textContent=String(candidates.length);$("bestTarget").textContent=candidates.length?`${candidates[0].score}/100 ${candidates[0].name}`:"—";$("hotspotPanel").innerHTML=candidates.slice(0,8).map((h,i)=>`<b>${i+1}. ${h.name}</b> — ${h.score}/100\n${h.reason}\n`).join("\n");if($("voiceHints").value==="on"&&candidates[0]?.score>=75)speak(`High potential target visible. ${candidates[0].name}.`);}
+function scoreMapPoint(lat,lng,mode,i){let ll=L.latLng(lat,lng),center=map.getCenter(),dist=center.distanceTo(ll),bounds=map.getBounds(),diag=bounds.getNorthWest().distanceTo(bounds.getSouthEast());let centerBias=1-(dist/(diag/2));let patterns=patternFor(mode);let p=patterns[i%patterns.length];let base=45+p.bonus+Math.round(centerBias*12)+localCalibrationBonus();let savedNear=nearSavedBonus(ll);base+=savedNear.bonus;let noise=Math.round((Math.random()-.5)*14);let score=clamp(base+noise,5,96);return{lat,lng,score,name:p.name,reason:p.reason+(savedNear.text?`\n${savedNear.text}`:""),action:p.action};}
+function patternFor(mode){if(mode==="auto")mode=map.getZoom()>16?"river":"terrace";const common=[{name:"Inside bend/payline",bonus:16,reason:"Likely low-energy streak where heavy minerals can settle.",action:"Pan a line from water toward shore."},{name:"Obstruction pocket",bonus:14,reason:"Pressure shadow behind rock/log/bridge-like obstacles can trap heavies.",action:"Dig compact gravel behind the obstruction."},{name:"Lowest coarse gravel",bonus:12,reason:"Gold sinks until stopped by packed gravel, clay, or bedrock.",action:"Sample the bottom 2–4 inches above the hard layer."},{name:"Black-sand line target",bonus:13,reason:"Heavy minerals often concentrate with fine gold.",action:"Pan the densest black-sand streak."}];if(mode==="desert")return[{name:"Flash-flood dropout",bonus:17,reason:"Desert placers drop heavies where flood energy suddenly decreases.",action:"Sample behind boulders/brush and on caliche."},{name:"Wash inside bend",bonus:15,reason:"Inside bends in washes concentrate coarse heavies.",action:"Clean cracks and false bedrock."},...common];if(mode==="terrace")return[{name:"Bench gravel edge",bonus:15,reason:"Old river benches can preserve former pay streaks.",action:"Sample gravel layers on clay."},{name:"Cut-bank layer",bonus:14,reason:"Exposed rounded gravel layers may represent old channel material.",action:"Pan the lowest rounded gravel."},...common];if(mode==="glacial")return[{name:"Glacial outwash heavy line",bonus:12,reason:"Glacial gold is usually fine and follows black sand.",action:"Use careful finishing pan work."},{name:"Clay/till contact",bonus:15,reason:"Compact till/clay can act as false bedrock.",action:"Sample gravel directly above clay."},...common];return common;}
+function localCalibrationBonus(){const c=JSON.parse(localStorage.goldV6Cal||'{"pans":0,"specks":0}');if(c.pans<5)return 0;return clamp(Math.round(((c.specks/c.pans)-.02)*80),-8,14)}
+function nearSavedBonus(ll){let saved=JSON.parse(localStorage.goldV6||"[]").filter(r=>isFinite(r.lat)&&isFinite(r.lon));let bonus=0,text="";saved.forEach(r=>{let d=ll.distanceTo(L.latLng(r.lat,r.lon));if(d<120&&r.score>=70){bonus=Math.max(bonus,8);text="Near a previous high-score/success point."}if(d<80&&(+r.inputs?.gold||0)>=2){bonus=Math.max(bonus,12);text="Near confirmed saved gold."}if(d<60&&r.score<35){bonus=Math.min(bonus,-5);text="Near a previous low/no-gold result."}});return{bonus,text}}
+function drawHotspot(h,i){let cls=h.score>=75?"hotIconHigh":h.score>=55?"hotIconMed":"hotIconLow";let m=L.marker([h.lat,h.lng],{icon:icon(cls,h.score>=75?21:17)}).addTo(hotspotLayer);m.bindPopup(`<b>${h.name}</b><br>Theoretical score: ${h.score}/100<br>${h.reason}<br><br><b>Next:</b> ${h.action}<br><button onclick="selectHotspot(${h.lat},${h.lng})">Analyze this spot</button> <button onclick="saveHotspot(${h.lat},${h.lng},${h.score},'${escAttr(h.name)}')">Save</button>`);}
+window.selectHotspot=(lat,lng)=>{let ll=L.latLng(lat,lng);setSelected(ll,false);document.querySelector('[data-tab="analyze"]').click();};
+window.saveHotspot=(lat,lng,score,name)=>{save({id:String(Date.now()),type:"hotspot",date:new Date().toISOString(),lat,lng,score,rating:"Theoretical hotspot",confidence:"Theoretical",notes:name,inputs:{gold:0},breakdown:["Generated by live viewport hotspot engine"],recommendation:"Pan-test before trusting."});};
 
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").hidden=false});
-$("installBtn").onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true}};
-
-$("gpsBtn").onclick=()=>{ if(!navigator.geolocation){$("geoStatus").textContent="GPS unavailable.";return}
-  $("geoStatus").textContent="Getting high-accuracy GPS…";
-  navigator.geolocation.getCurrentPosition(p=>{
-    $("lat").value=p.coords.latitude.toFixed(6); $("lon").value=p.coords.longitude.toFixed(6);
-    $("geoStatus").textContent=`GPS fix: ±${Math.round(p.coords.accuracy)} m`;
-  },e=>$("geoStatus").textContent="GPS error: "+e.message,{enableHighAccuracy:true,timeout:16000,maximumAge:20000});
-};
-$("copyBtn").onclick=async()=>{const s=`${$("lat").value}, ${$("lon").value}`; await navigator.clipboard.writeText(s).catch(()=>{}); alert("Coordinates copied: "+s)};
-$("mapBtn").onclick=()=>{const lat=parseFloat($("lat").value),lon=parseFloat($("lon").value); if(!isFinite(lat)||!isFinite(lon))return alert("Enter coordinates first."); window.open(`https://maps.apple.com/?ll=${lat},${lon}&q=Gold%20Scout%20Site`,"_blank")};
-
-$("photo").onchange=e=>{const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>analyze(img);img.src=URL.createObjectURL(f)};
-
-function analyze(img){
- const c=$("canvas"),ctx=c.getContext("2d",{willReadFrequently:true});
- const scale=Math.min(1100/img.width,1); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
- ctx.drawImage(img,0,0,c.width,c.height);
- const d=ctx.getImageData(0,0,c.width,c.height).data;
- let dark=0,gray=0,tan=0,green=0,blue=0,yellow=0,edge=0,total=0,prev=0;
- for(let i=0;i<d.length;i+=4){
-   const r=d[i],g=d[i+1],b=d[i+2],lum=.2126*r+.7152*g+.0722*b,max=Math.max(r,g,b),min=Math.min(r,g,b),sat=max?((max-min)/max):0;
-   total++;
-   if(lum<58&&sat<.50)dark++;
-   if(sat<.20&&lum>60&&lum<200)gray++;
-   if(r>85&&g>60&&b<95&&sat>.16)tan++;
-   if(g>r*1.08&&g>b*1.08&&sat>.22)green++;
-   if(b>r*1.08&&b>g*.9&&sat>.18)blue++;
-   if(r>150&&g>112&&b<90&&sat>.33)yellow++;
-   if(i>4&&Math.abs(lum-prev)>45)edge++;
-   prev=lum;
- }
- const pct=x=>x/total;
- lastImage={
-   dark:pct(dark),gray:pct(gray),tan:pct(tan),green:pct(green),blue:pct(blue),yellow:pct(yellow),edge:pct(edge),
-   texture:clamp((pct(edge)-.075)/.20,0,1),
-   darkMineral:clamp((pct(dark)-.045)/.22,0,1),
-   gravel:clamp((pct(gray)+pct(tan)-.22)/.50,0,1),
-   vegetationPenalty:clamp((pct(green)-.12)/.35,0,1),
-   waterPenalty:clamp((pct(blue)-.10)/.30,0,1)
- };
- $("imageMetrics").innerHTML=[
-   ["Texture/coarse-gravel proxy",lastImage.texture],
-   ["Dark-mineral proxy",lastImage.darkMineral],
-   ["Gravel/clay color proxy",lastImage.gravel],
-   ["Vegetation interference",lastImage.vegetationPenalty],
-   ["Water/shadow interference",lastImage.waterPenalty],
-   ["Yellow pixel caution",lastImage.yellow]
- ].map(([k,v])=>`<div class="metric"><b>${k}</b><br>${(v*100).toFixed(0)}%</div>`).join("");
-}
-
-function regional(lat,lon){
- let s=0,lines=[];
- if(isFinite(lat)&&isFinite(lon)){
-   if(lat>=40.25&&lat<=41.9&&lon>=-87.6&&lon<=-84.6){s+=12;lines.push("+12 glaciated northern/central Indiana belt")}
-   if(lat>=40.8&&lat<=41.35&&lon>=-86.35&&lon<=-85.15){s+=10;lines.push("+10 Eel River / Wabash regional placer window")}
-   if(lat>=41.02&&lat<=41.18&&lon>=-85.78&&lon<=-85.50){s+=7;lines.push("+7 South Whitley local scout window")}
-   if(lat>=41.25&&lat<=41.45&&lon>=-85.55&&lon<=-85.25){s+=2;lines.push("+2 Chain O' Lakes glacial terrain, but lower river-sorting advantage")}
- } else lines.push("No GPS score");
- return {s,lines};
-}
-function checked(id,pts,text){return $(id).checked?{pts,line:`+${pts} ${text}`}:{pts:0,line:null}}
-
-function calc(){
- let score=0,lines=[];
- const lat=parseFloat($("lat").value),lon=parseFloat($("lon").value),reg=regional(lat,lon);score+=reg.s;lines.push(...reg.lines);
- const lf=$("landform").value,en=$("energy").value,dep=$("depth").value,mo=$("moisture").value;
- score+=weights.landform[lf];lines.push(`${weights.landform[lf]>=0?"+":""}${weights.landform[lf]} landform: ${lf.replaceAll("_"," ")}`);
- score+=weights.energy[en];lines.push(`${weights.energy[en]>=0?"+":""}${weights.energy[en]} water energy: ${en.replaceAll("_"," ")}`);
- score+=weights.depth[dep];lines.push(`+${weights.depth[dep]} sample depth/false-bottom quality`);
- score+=weights.moisture[mo];lines.push(`${weights.moisture[mo]>=0?"+":""}${weights.moisture[mo]} moisture/active-material factor`);
- [
-  checked("insideBend",12,"inside-bend sorting"),
-  checked("naturalTrap",11,"natural obstruction trap"),
-  checked("coarseLag",10,"coarse lag gravel"),
-  checked("clay",14,"clay/hardpan/bedrock trap"),
-  checked("bankLayers",7,"rounded gravel layers in bank"),
-  checked("blackSand",16,"black sand observed"),
-  checked("garnets",10,"dense heavies observed"),
-  checked("legal",2,"legal access confirmed")
- ].forEach(x=>{score+=x.pts;if(x.line)lines.push(x.line)});
- const panBS=parseInt($("panBlackSand").value),gold=parseInt($("goldSeen").value),pans=parseInt($("pans").value)||0;
- score+=weights.blackSandPan[panBS];lines.push(`+${weights.blackSandPan[panBS]} pan black-sand result`);
- score+=weights.goldSeen[gold];lines.push(`+${weights.goldSeen[gold]} visible-gold confidence`);
- if(pans>=5){score+=5;lines.push("+5 multiple test pans improve confidence")} else if(pans>0){score+=2;lines.push("+2 limited test panning")}
- if(lastImage){
-   let imgPts=lastImage.texture*7+lastImage.darkMineral*6+lastImage.gravel*5-lastImage.vegetationPenalty*4-lastImage.waterPenalty*3;
-   score+=imgPts; lines.push(`${imgPts>=0?"+":""}${imgPts.toFixed(1)} photo-derived terrain/material signal`);
-   if(lastImage.yellow>.018)lines.push("Photo caution: yellow pixels are not gold confirmation.");
- } else lines.push("No photo analysis included.");
- score=Math.round(clamp(score,0,100));
- let rating=score>=78?"Very high priority test spot":score>=62?"High — pan systematically":score>=42?"Moderate — worth several test pans":score>=25?"Low/moderate — quick scout only":"Low — move unless evidence improves";
- $("score").textContent=score;$("rating").textContent=rating;$("barFill").style.width=score+"%";$("breakdown").textContent=lines.join("\n");
- const next=nextStep(score,panBS,gold);
- $("nextStep").textContent=next;
- lastReport={date:new Date().toISOString(),lat,lon,score,rating,breakdown:lines,next};
-}
-function nextStep(score,bs,gold){
- if(gold>=2)return "Mark this exact layer and elevation. Take 5 more pans along a line across the bar to define the pay streak width.";
- if(bs>=2&&score>=50)return "Follow the black sand. Take pans 10–15 feet apart from waterline toward shore, then dig only the best line down to clay/hardpan.";
- if(score>=50)return "Take 5–10 test pans before digging deep. Target the lowest coarse gravel directly above clay or compact till.";
- if(score>=25)return "Do two quick pans. Move unless you see black sand, garnets, lead shot, or a hard bottom under gravel.";
- return "Do not spend much time here. Look for inside bends, creek mouths, riffle tail-outs, or gravel on clay.";
-}
-$("calcBtn").onclick=calc;
-$("saveBtn").onclick=()=>{if(!lastReport)calc();const a=JSON.parse(localStorage.goldReportsV2||"[]");a.unshift(lastReport);localStorage.goldReportsV2=JSON.stringify(a.slice(0,100));render()};
-$("exportBtn").onclick=()=>{if(!lastReport)calc();const blob=new Blob([JSON.stringify(lastReport,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="gold-scout-report.json";a.click();URL.revokeObjectURL(url)};
-$("clearBtn").onclick=()=>{if(confirm("Clear saved reports?")){localStorage.removeItem("goldReportsV2");render()}};
-function render(){const a=JSON.parse(localStorage.goldReportsV2||"[]");$("reports").innerHTML=a.length?a.map(r=>`<div class="report"><b>${r.score}/100 — ${r.rating}</b><br><span class="muted">${new Date(r.date).toLocaleString()}</span><br>${isFinite(r.lat)?`GPS: ${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}<br>`:""}<details><summary>Details</summary><pre>${esc(r.breakdown.join("\n")+"\n\nNext: "+r.next)}</pre></details></div>`).join(""):"<p class='muted'>No saved reports.</p>"}
+$("photo").onchange=e=>{const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>analyzePhoto(img);img.src=URL.createObjectURL(f)};
+function analyzePhoto(img){const c=$("photoCanvas"),ctx=c.getContext("2d",{willReadFrequently:true});let scale=Math.min(1000/img.width,1);c.width=img.width*scale;c.height=img.height*scale;ctx.drawImage(img,0,0,c.width,c.height);let d=ctx.getImageData(0,0,c.width,c.height).data,dark=0,gray=0,tan=0,green=0,blue=0,edge=0,total=0,prev=0;for(let i=0;i<d.length;i+=4){let r=d[i],g=d[i+1],b=d[i+2],lum=.2126*r+.7152*g+.0722*b,max=Math.max(r,g,b),min=Math.min(r,g,b),sat=max?(max-min)/max:0;total++;if(lum<58&&sat<.5)dark++;if(sat<.2&&lum>60&&lum<205)gray++;if(r>85&&g>60&&b<100&&sat>.16)tan++;if(g>r*1.08&&g>b*1.08&&sat>.22)green++;if(b>r*1.08&&b>g*.9&&sat>.18)blue++;if(i>4&&Math.abs(lum-prev)>45)edge++;prev=lum}let pct=x=>x/total;lastImage={texture:clamp((pct(edge)-.075)/.2,0,1),dark:clamp((pct(dark)-.045)/.22,0,1),gravel:clamp((pct(gray)+pct(tan)-.22)/.5,0,1),noise:clamp((pct(green)+pct(blue)-.18)/.45,0,1)};$("photoMetrics").innerHTML=[["Coarse texture",lastImage.texture],["Dark mineral proxy",lastImage.dark],["Gravel/clay proxy",lastImage.gravel],["Vegetation/water interference",lastImage.noise]].map(x=>`<div class="metric"><b>${x[0]}</b><br>${Math.round(x[1]*100)}%</div>`).join("")}
+function calc(){let s=0,lines=[];["region","landform","bottom","energy","depth","access"].forEach(id=>{let val=$(id).value,w=W[id][val];s+=w;lines.push(`${w>=0?"+":""}${w} ${id}: ${val}`)});[["blackSand",16,"black sand visible"],["heavies",11,"dense heavies"],["coarse",10,"coarse lag gravel"],["obstruction",10,"obstruction trap"],["tributary",9,"tributary/confluence"],["legal",2,"legal access checked"]].forEach(a=>{if($(a[0]).checked){s+=a[1];lines.push(`+${a[1]} ${a[2]}`)}});let pb=+$("panBlack").value,g=+$("gold").value,pans=+$("pans").value||0;s+=W.panBlack[pb]+W.gold[g];lines.push(`+${W.panBlack[pb]} pan black sand`);lines.push(`+${W.gold[g]} gold result`);if(pans>=10){s+=7;lines.push("+7 strong sample count")}else if(pans>=5){s+=5;lines.push("+5 useful sample count")}else if(pans>0){s+=2;lines.push("+2 limited sample count")}if(lastImage){let ip=lastImage.texture*7+lastImage.dark*7+lastImage.gravel*5-lastImage.noise*4;s+=ip;lines.push(`${ip>=0?"+":""}${ip.toFixed(1)} photo signal`)}let cal=localCalibrationBonus();s+=cal;if(cal)lines.push(`${cal>=0?"+":""}${cal} local calibration`);s=Math.round(clamp(s,0,100));let conf=(pans>=5||g>=2)?"High":(lastImage||pans>0)?"Medium":"Low";let rating=s>=85?"Exceptional — grid pan now":s>=70?"High — systematic testing":s>=50?"Moderate — worth several pans":s>=30?"Low/moderate — quick scout":"Low — move unless evidence improves";$("score").textContent=s;$("rating").textContent=rating;$("barFill").style.width=s+"%";$("confidence").textContent="Confidence: "+conf;$("breakdown").textContent=lines.join("\n");$("recommend").textContent=recommend(s,pb,g);let ll=L.latLng(+$("lat").value,+$("lon").value);lastReport={id:String(Date.now()),type:"report",date:new Date().toISOString(),lat:ll.lat,lon:ll.lng,score:s,rating,confidence:conf,notes:$("notes").value,inputs:collect(),breakdown:lines,recommendation:$("recommend").textContent};return lastReport}
+function recommend(s,pb,g){if(g>=2)return"Work this exact layer. Pan a grid every 10–15 ft to define the pay streak.";if(pb>=2)return"Follow the black sand line and sample the lowest gravel over clay/hardpan/bedrock.";if(s>=50)return"Take 5 pans: waterline, midbar, highbar, obstruction, and lowest gravel.";return"Use the live map to find a stronger nearby trap."}
+function collect(){return[...document.querySelectorAll("input,select,textarea")].reduce((a,e)=>{if(e.type==="checkbox")a[e.id]=e.checked;else if(e.id)a[e.id]=e.value;return a},{})}
+$("calcBtn").onclick=calc;$("saveReportBtn").onclick=()=>save(calc());$("saveCurrentBtn").onclick=()=>save(calc());$("navBtn").onclick=()=>{let lat=+$("lat").value,lon=+$("lon").value;if(isFinite(lat)&&isFinite(lon))window.open(`https://maps.apple.com/?ll=${lat},${lon}&q=Gold%20Scout%20Target`,"_blank")};
+function save(r){let a=JSON.parse(localStorage.goldV6||"[]");a.unshift(r);localStorage.goldV6=JSON.stringify(a.slice(0,1000));renderJournal();renderPins();alert("Saved to journal and map.");}
+function renderPins(){if(!pinLayer)return;pinLayer.clearLayers();let filter=$("journalFilter")?.value||"all";JSON.parse(localStorage.goldV6||"[]").filter(r=>isFinite(r.lat)&&isFinite(r.lon)).filter(r=>filter==="all"||(filter==="success"&&(+r.inputs?.gold||0)>=2)||(filter==="heavies"&&(+r.inputs?.panBlack||0)>=2)||(filter==="high"&&r.score>=70)||(filter==="low"&&r.score<45)).forEach(r=>{let cls=(+r.inputs?.gold||0)>=2||r.score>=70?"pinSuccess":r.score>=45?"pinMed":"pinLow";L.marker([r.lat,r.lon],{icon:icon(cls,17)}).addTo(pinLayer).bindPopup(`<b>${r.score}/100</b><br>${esc(r.rating)}<br>${esc(r.notes||"")}<br><button onclick="deleteReport('${r.id}')">Delete</button>`)});}
+window.deleteReport=id=>{localStorage.goldV6=JSON.stringify(JSON.parse(localStorage.goldV6||"[]").filter(r=>r.id!==id));renderJournal();renderPins();}
+function renderJournal(){let list=JSON.parse(localStorage.goldV6||"[]"),f=$("journalFilter")?.value||"all";list=list.filter(r=>f==="all"||(f==="success"&&(+r.inputs?.gold||0)>=2)||(f==="heavies"&&(+r.inputs?.panBlack||0)>=2)||(f==="high"&&r.score>=70)||(f==="low"&&r.score<45));$("journalList").innerHTML=list.length?list.map(r=>`<div class="journalItem"><b>${r.score}/100 — ${esc(r.rating)}</b><br><span>${new Date(r.date).toLocaleString()} • ${esc(r.confidence)}</span><br>${Number(r.lat).toFixed(6)}, ${Number(r.lon).toFixed(6)}<br>${esc(r.notes||"")}<details><summary>Details</summary><pre>${esc((r.breakdown||[]).join("\n"))}</pre></details></div>`).join(""):"<p>No saved reports yet.</p>"}
+$("journalFilter").onchange=()=>{renderJournal();renderPins()};$("clearAllBtn").onclick=()=>{if(confirm("Clear all saved reports?")){localStorage.removeItem("goldV6");renderJournal();renderPins()}};
+function download(name,data,type="application/json"){let blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
+$("exportJsonBtn").onclick=()=>download("gold-scout-v6.json",JSON.stringify(JSON.parse(localStorage.goldV6||"[]"),null,2));
+$("exportCsvBtn").onclick=()=>{let a=JSON.parse(localStorage.goldV6||"[]");download("gold-scout-v6.csv","date,lat,lon,score,rating,confidence,notes\n"+a.map(r=>[r.date,r.lat,r.lon,r.score,r.rating,r.confidence,r.notes].map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n"),"text/csv")};
+$("addCalBtn").onclick=()=>{let c=JSON.parse(localStorage.goldV6Cal||'{"pans":0,"specks":0}');c.pans+=+$("calPans").value||0;c.specks+=+$("calSpecks").value||0;localStorage.goldV6Cal=JSON.stringify(c);showCal();generateViewportHotspots();};
+$("resetCalBtn").onclick=()=>{localStorage.removeItem("goldV6Cal");showCal();generateViewportHotspots();};
+function showCal(){let c=JSON.parse(localStorage.goldV6Cal||'{"pans":0,"specks":0}');$("calStatus").textContent=`Calibration: ${c.specks} specks across ${c.pans} pans. Current bonus: ${localCalibrationBonus()}.`;}
+function speak(t){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}catch(e){}}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
-if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-render();
+function escAttr(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});initMap();renderJournal();showCal();

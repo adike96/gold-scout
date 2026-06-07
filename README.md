@@ -1,23 +1,16 @@
-# Gold Potential Scout V2
+# Gold Scout Global V6
 
-Installable iPhone web app for placer-gold scouting.
+Version 6 adds:
+- Live satellite map with viewport-based theoretical hotspot engine
+- Hotspots refresh as you pan/zoom the visible map area
+- Street/topographic layer toggles
+- GPS and walking tracking
+- Spot analyzer with global placer scoring
+- Photo intelligence
+- Saved success/failure journal
+- Local calibration from real pan results
+- JSON/CSV exports
+- Voice hint option
+- iPhone install/PWA support
 
-## Files
-- index.html
-- styles.css
-- app.js
-- manifest.webmanifest
-- sw.js
-
-## Publish on GitHub Pages
-1. Create a public GitHub repository named `gold-scout`.
-2. Upload the five app files to the repository root.
-3. Go to Settings > Pages.
-4. Source: Deploy from branch.
-5. Branch: main, folder: /root.
-6. Open the GitHub Pages URL in Safari.
-7. Share > Add to Home Screen.
-
-## Model limits
-This is a field estimator. It does not prove gold is present.
-Test pans remain the source of truth.
+Important: V6 is a static web app. It uses live satellite tiles, but true USGS/LiDAR/claim/geology API automation requires a future backend/API-key version.
