@@ -1,6 +1,6 @@
 {
-  "name": "Gold Scout Global V6.4",
-  "short_name": "Gold Scout V6.4",
+  "name": "Gold Scout Global V6",
+  "short_name": "Gold Scout V6",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#07101f",

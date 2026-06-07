@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#0f172a"/>
-<title>Gold Scout Global V6.4</title>
+<title>Gold Scout Global V6.2.2</title>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="styles.css"/>
@@ -12,38 +12,39 @@
 <body>
 <header>
   <div>
-    <h1>Gold Scout Global V6.4</h1>
-    <p>Manual-refresh river heat map. No jumping. No auto reshuffle.</p>
+    <h1>Gold Scout Global V6.2.2</h1>
+    <p>River-locked viewport heat-map engine, satellite maps, GPS, field scoring, photos, finds, exports, and offline-ready reports.</p>
   </div>
   <button id="installBtn" hidden>Install</button>
 </header>
 
 <nav>
-  <button data-tab="map" class="active">Map</button>
-  <button data-tab="analyze">Analyze</button>
+  <button data-tab="map" class="active">Live Map</button>
+  <button data-tab="analyze">Analyze Spot</button>
   <button data-tab="journal">Journal</button>
-  <button data-tab="settings">Settings</button>
+  <button data-tab="settings">Model</button>
   <button data-tab="guide">Guide</button>
 </nav>
 
 <main>
 <section class="card alert">
-  <b>V6.4 fix:</b> Heat map does not refresh while you pan or zoom. Move the map wherever you want, then tap <b>Refresh Heat Map</b>.
+  <b>Accuracy note:</b> V6 ranks prospecting targets. It cannot guarantee gold. Use test pans, legal access checks, and local geology/claim research.
 </section>
 
 <section id="map" class="tab active">
   <section class="card mapCard">
     <div class="mapHead">
-      <h2>Stable river heat map</h2>
-      <span id="liveBadge">Manual refresh</span>
+      <h2>River-locked satellite heat-map map</h2>
+      <span id="liveBadge">River heat map: ON</span>
     </div>
     <div class="toolbar">
       <button id="gpsBtn">Use GPS</button>
-      <button id="refreshHeatBtn">Refresh Heat Map</button>
-      <button id="clearHeatBtn" class="secondary">Clear Heat Map</button>
-      <button id="saveCurrentBtn" class="secondary">Save Selected</button>
+      <button id="trackBtn" class="secondary">Track</button>
+      <button id="stopTrackBtn" class="secondary">Stop</button>
+      <button id="refreshHeat-mapsBtn">Refresh heat map</button>
+      <button id="saveCurrentBtn" class="secondary">Save selected spot</button>
       <select id="mapMode">
-        <option value="auto">Auto terrain mode</option>
+        <option value="auto">Auto heat-map mode</option>
         <option value="river">River / creek</option>
         <option value="desert">Desert wash</option>
         <option value="terrace">Old terrace / bench</option>
@@ -51,19 +52,13 @@
       </select>
     </div>
     <div id="mapView"></div>
-    <div class="legend">
-      <span><i class="lg green"></i> High</span>
-      <span><i class="lg yellow"></i> Medium</span>
-      <span><i class="lg orange"></i> Low</span>
-      <span><i class="lg blue"></i> Mapped river/creek</span>
-    </div>
     <div class="metrics">
       <div class="metric"><b>Heat cells</b><br><span id="candidateCount">—</span></div>
-      <div class="metric"><b>Best area</b><br><span id="bestTarget">—</span></div>
+      <div class="metric"><b>Best visible area</b><br><span id="bestTarget">—</span></div>
       <div class="metric"><b>GPS accuracy</b><br><span id="gpsAccuracy">—</span></div>
-      <div class="metric"><b>Status</b><br><span id="mapStatus">Map ready</span></div>
+      <div class="metric"><b>Selected</b><br><span id="selectedCoords">Tap map</span></div>
     </div>
-    <div id="hotspotPanel" class="panel">Move the map to the river area you want, then tap Refresh Heat Map.</div>
+    <div id="heat-mapPanel" class="panel">Pan or zoom the map. V6.1 will rank theoretical targets on mapped rivers/streams in the visible area.</div>
   </section>
 </section>
 
@@ -75,15 +70,15 @@
       <label>Longitude <input id="lon" inputmode="decimal"></label>
     </div>
     <div class="grid2">
-      <label>Geologic setting
+      <label>Geologic / deposit setting
         <select id="region">
           <option value="unknown">Unknown / field evidence dominant</option>
           <option value="historic">Known historic gold district</option>
-          <option value="lode">Near hardrock/lode gold</option>
+          <option value="lode">Near hardrock/lode gold sources</option>
           <option value="glacial">Glaciated transported fine-gold area</option>
           <option value="greenstone">Greenstone / Archean belt</option>
           <option value="mountain">Mountain/orogenic gold belt</option>
-          <option value="volcanic">Volcanic/epithermal province</option>
+          <option value="volcanic">Volcanic/epithermal gold province</option>
           <option value="desert">Desert wash placer</option>
           <option value="low">Low-probability plain/carbonate/urban fill</option>
         </select>
@@ -107,7 +102,7 @@
           <option value="unknown">Unknown</option>
           <option value="sand">Loose sand</option>
           <option value="gravel">Packed lower gravel</option>
-          <option value="clay">Clay / hardpan</option>
+          <option value="clay">Clay / hardpan / compact till</option>
           <option value="bedrock">Bedrock cracks</option>
         </select>
       </label>
@@ -132,7 +127,7 @@
   </section>
 
   <section class="card">
-    <h2>Photo scoring</h2>
+    <h2>Photo intelligence</h2>
     <input id="photo" type="file" accept="image/*" capture="environment"/>
     <canvas id="photoCanvas"></canvas>
     <div id="photoMetrics" class="metrics"></div>
@@ -142,14 +137,23 @@
     <h2>Test pan data</h2>
     <div class="grid3">
       <label>Pans tested <input id="pans" type="number" min="0" value="0"></label>
-      <label>Black sand
+      <label>Black sand amount
         <select id="panBlack"><option value="0">None</option><option value="1">Trace</option><option value="2">Moderate</option><option value="3">Heavy</option><option value="4">Very heavy</option></select>
       </label>
-      <label>Gold
+      <label>Gold result
         <select id="gold"><option value="0">None</option><option value="1">Possible speck</option><option value="2">1–3 specks</option><option value="3">Repeatable gold</option><option value="4">Good repeatable gold</option></select>
       </label>
+      <label>Sample depth
+        <select id="depth"><option value="surface">Surface only</option><option value="six">0–6 inches</option><option value="target">6–18 inches to lower gravel</option><option value="deep">18+ inches</option><option value="false">Clay/bedrock contact</option></select>
+      </label>
+      <label>Water level
+        <select id="waterLevel"><option value="normal">Normal</option><option value="low">Low water</option><option value="high">High/flood recent</option><option value="dry">Dry channel</option></select>
+      </label>
+      <label>Access
+        <select id="access"><option value="unknown">Unknown</option><option value="public">Public/allowed</option><option value="permission">Private permission</option><option value="restricted">Restricted/avoid</option></select>
+      </label>
     </div>
-    <label>Notes <textarea id="notes" placeholder="Clay at 10 inches, black sand streak, etc."></textarea></label>
+    <label>Field notes <textarea id="notes" placeholder="Clay at 10 inches, black sand streak 15 ft from water, 2 flat specks..."></textarea></label>
   </section>
 
   <section class="card result">
@@ -159,7 +163,7 @@
     <div class="bar"><span id="barFill"></span></div>
     <div id="confidence">Confidence: —</div>
     <button id="calcBtn">Calculate</button>
-    <button id="saveReportBtn" class="secondary">Save to Map/Journal</button>
+    <button id="saveReportBtn" class="secondary">Save to map/journal</button>
     <button id="navBtn" class="secondary">Navigate</button>
     <div id="breakdown"></div>
     <div id="recommend" class="panel"></div>
@@ -181,13 +185,19 @@
 
 <section id="settings" class="tab">
   <section class="card">
-    <h2>Heat map settings</h2>
+    <h2>Accuracy model settings</h2>
     <div class="grid2">
-      <label>Heat map detail
-        <select id="density"><option value="low">Low / faster</option><option value="medium" selected>Medium</option><option value="high">High / more detail</option></select>
+      <label>Viewport density
+        <select id="density"><option value="low">Low / faster</option><option value="medium" selected>Medium</option><option value="high">High / more targets</option></select>
       </label>
-      <label>Manual refresh only
-        <select id="autoRefresh"><option value="off" selected>Off / stable</option></select>
+      <label>Max visible heat-maps
+        <select id="maxHeat-maps"><option value="10">10</option><option value="20" selected>20</option><option value="35">35</option><option value="50">50</option></select>
+      </label>
+      <label>Auto-refresh while panning
+        <select id="autoRefresh"><option value="on" selected>On</option><option value="off">Off</option></select>
+      </label>
+      <label>Voice hints
+        <select id="voiceHints"><option value="off" selected>Off</option><option value="on">On</option></select>
       </label>
     </div>
     <h2>Local calibration</h2>
@@ -203,20 +213,20 @@
 
 <section id="guide" class="tab">
   <section class="card">
-    <h2>How V6.4 works</h2>
-    <ol>
-      <li>Move the map to the river stretch you want.</li>
-      <li>Tap <b>Refresh Heat Map</b>.</li>
-      <li>The overlay stays fixed until you refresh again.</li>
-      <li>Green areas are the best theoretical test zones.</li>
-      <li>Tap a colored area to analyze that exact spot.</li>
-    </ol>
-    <p>This version intentionally disables auto-refresh so the results do not jump around while you pan or zoom.</p>
+    <h2>What V6 improves</h2>
+    <ul>
+      <li><b>Live viewport heat-maps:</b> the app analyzes the current map view and refreshes ranked theoretical targets as you pan/zoom.</li>
+      <li><b>Satellite-first workflow:</b> heat-map pins appear directly on real imagery.</li>
+      <li><b>Field learning:</b> saved pan results and calibration adjust future scores.</li>
+      <li><b>User-friendly labels:</b> every heat-map has a plain-English reason and next test action.</li>
+      <li><b>Journal:</b> success and failure points are both saved because failures improve your local model.</li>
+    </ul>
+    <p><b>Limits:</b> This static web app cannot yet pull live USGS/LiDAR/claim layers automatically without adding API services. V6 is structured so those can be added next.</p>
   </section>
 </section>
 </main>
 
-<footer>Gold Scout Global V6.4 • Manual heat map refresh • Saved data stays on your device unless exported.</footer>
+<footer>Gold Scout Global V6.2.2 • Satellite/live map needs internet. Reports are stored locally unless exported.</footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
 </body>
